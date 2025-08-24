@@ -1,0 +1,19 @@
+version: "3.8"
+services:
+  web:
+    build:
+      context: .
+      args:
+        PUBLIC_SUPABASE_URL: ${PUBLIC_SUPABASE_URL}
+        PUBLIC_SUPABASE_ANON_KEY: ${PUBLIC_SUPABASE_ANON_KEY}
+    ports:
+      - "3000:3000"
+    env_file:
+      - .env
+    environment:
+      - NODE_ENV=production
+      # s'assurer que le runtime reçoit aussi les variables que createServerClient attend
+      - SUPABASE_URL=${PUBLIC_SUPABASE_URL}
+      - SUPABASE_ANON_KEY=${PUBLIC_SUPABASE_ANON_KEY}
+      - PUBLIC_SUPABASE_URL=${PUBLIC_SUPABASE_URL}
+      - PUBLIC_SUPABASE_ANON_KEY=${PUBLIC_SUPABASE_ANON_KEY}
