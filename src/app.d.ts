@@ -1,5 +1,6 @@
 import type { Session, SupabaseClient, User } from '@supabase/supabase-js'
 import type { Database } from './database.types' // import generated types
+import type { Notes } from '$lib/types' // import notes type
 
 declare global {
 	namespace App {
@@ -12,6 +13,8 @@ declare global {
 		}
 		interface PageData {
 			session: Session | null
+			supabase?: SupabaseClient<Database>
+			notes?: Notes
 		}
 		// interface PageState {}
 		// interface Platform {}

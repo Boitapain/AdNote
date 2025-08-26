@@ -1,7 +1,12 @@
-<script>
-    let { data } = $props();
-    let { session } = $derived(data);
+<script lang="ts">
+    import Navbar from "$lib/components/Navbar.svelte";
+    
+    let { data }: { data: any } = $props();
+    let { session, supabase, notes = [] } = $derived(data);
 </script>
+
+<!-- Navbar pour la page d'accueil -->
+<Navbar {session} {supabase} {notes} />
 
 <section class="max-w-5xl mx-auto p-6">
     <div class="grid gap-6 md:grid-cols-5">
@@ -40,9 +45,9 @@
 
                 <div class="mt-4">
                     <ul class="menu bg-base-100 rounded-box w-full p-2">
-                        <li><a>Vue mensuelle</a></li>
-                        <li><a>Vue hebdo</a></li>
-                        <li><a>Rappels & notifications</a></li>
+                        <li><a href="/calendar">Vue mensuelle</a></li>
+                        <li><a href="/calendar">Vue hebdo</a></li>
+                        <li><a href="/calendar">Rappels & notifications</a></li>
                     </ul>
                 </div>
             </div>
