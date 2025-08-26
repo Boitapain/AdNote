@@ -57,7 +57,7 @@
     <!-- CTA -->
     <div class="mt-8 text-center">
         {#if session}
-            <a href="/private" class="btn btn-primary btn-lg">Votre Dashboard</a>
+            <a href="/dashboard" class="btn btn-primary btn-lg">Votre Dashboard</a>
         {:else}
             <a href="/auth" class="btn btn-primary btn-lg">Se connecter</a>
         {/if}

@@ -1,8 +1,14 @@
+import { redirect } from '@sveltejs/kit'
 import type { LayoutServerLoad } from './$types'
 import type { Notes } from '$lib/types'
 
 export const load: LayoutServerLoad = async ({ locals: { safeGetSession, supabase }, cookies }) => {
     const { session } = await safeGetSession()
+    
+    // Redirection si pas connecté
+    if (!session) {
+        redirect(303, '/auth')
+    }
     
     let notes: Notes = []
     if (session?.user?.id) {

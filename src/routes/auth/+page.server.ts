@@ -26,14 +26,14 @@ export const actions: Actions = {
             console.error(error)
             redirect(303, '/auth/error')
         } else {
-            redirect(303, '/private')
+            redirect(303, '/dashboard')
         }
     },
     github: async ({ url, locals: { supabase } }) => {
         const { data, error } = await supabase.auth.signInWithOAuth({
             provider: 'github',
             options: {
-                redirectTo: `${url.origin}/auth/confirm?next=/private`
+                redirectTo: `${url.origin}/auth/confirm?next=/dashboard`
             }
         })
 

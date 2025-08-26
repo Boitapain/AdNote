@@ -6,7 +6,7 @@ import type { RequestHandler } from './$types'
 export const GET: RequestHandler = async ({ url, locals: { supabase } }) => {
     const token_hash = url.searchParams.get('token_hash')
     const type = url.searchParams.get('type') as EmailOtpType | null
-    const next = url.searchParams.get('next') ?? '/private'
+    const next = url.searchParams.get('next') ?? '/dashboard'
     const code = url.searchParams.get('code')
 
     console.log('Confirm callback params:', { token_hash, type, next, code })
