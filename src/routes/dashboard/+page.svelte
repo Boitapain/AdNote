@@ -1,6 +1,16 @@
 <script lang="ts">
-    let { data } = $props();
+    import type { Notes } from '$lib/types';
+    
+    let { data }: { 
+        data: any & { notes?: Notes }
+    } = $props();
     let { notes = [] } = $derived(data);
+    
+    // Debug: Log what we receive (reactive)
+    // $effect(() => {
+    //     console.log('🏠 Dashboard page - notes received:', notes);
+    //     console.log('🏠 Dashboard page - full data:', data);
+    // });
     
     // Simulation des prochains événements
     const upcomingEvents = [
@@ -25,7 +35,7 @@
                 {#each notes.slice(0, 5) as note}
                     <div class="card bg-base-100 shadow-lg">
                         <div class="card-body p-4">
-                            <p class="truncate">{note.note}</p>
+                            <p class="truncate">{note.title}</p>
                         </div>
                     </div>
                 {:else}

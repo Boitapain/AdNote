@@ -1,7 +1,10 @@
 <script lang="ts">
     import Navbar from "$lib/components/Navbar.svelte";
+    import type { Notes } from '$lib/types';
     
-    let { data }: { data: any } = $props();
+    let { data }: { 
+        data: any & { notes?: Notes }
+    } = $props();
     let { session, supabase, notes = [] } = $derived(data);
 </script>
 

@@ -3,11 +3,17 @@
     import type { Snippet } from "svelte";
     
     let { data, children }: { 
-        data: any; 
+        data: any & { notes?: import('$lib/types').Notes }; 
         children: Snippet;
     } = $props();
     
     let { session, supabase, notes = [] } = $derived(data);
+    
+    // Debug: Check what data dashboard layout receives
+    // $effect(() => {
+    //     console.log('🏗️ Dashboard Layout - full data received:', data);
+    //     console.log('🏗️ Dashboard Layout - notes:', notes);
+    // });
 </script>
 
 <!-- Layout avec navbar pour les pages privées -->

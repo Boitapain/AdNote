@@ -8,7 +8,13 @@
         children: Snippet;
     } = $props();
     
-    let { session, supabase } = $derived(data);
+    let { session, supabase, notes = [] } = $derived(data);
+
+    // Debug: Check what root layout receives
+    // $effect(() => {
+    //     console.log('🏠 Root Layout - full data received:', data);
+    //     console.log('🏠 Root Layout - notes:', notes);
+    // });
 
     onMount(() => {
         const { data } = supabase.auth.onAuthStateChange((_, newSession) => {

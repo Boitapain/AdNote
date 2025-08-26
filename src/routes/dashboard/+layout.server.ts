@@ -1,8 +1,7 @@
 import { redirect } from '@sveltejs/kit'
 import type { LayoutServerLoad } from './$types'
-import type { Notes } from '$lib/types'
 
-export const load: LayoutServerLoad = async ({ locals: { safeGetSession, supabase }, cookies }) => {
+export const load: LayoutServerLoad = async ({ locals: { safeGetSession }, cookies, parent }) => {
     const { session } = await safeGetSession()
     
     // Redirection si pas connecté
@@ -10,19 +9,14 @@ export const load: LayoutServerLoad = async ({ locals: { safeGetSession, supabas
         redirect(303, '/auth')
     }
     
-    let notes: Notes = []
-    if (session?.user?.id) {
-        const { data } = await supabase
-            .from('notes')
-            .select('id, note')
-            .eq('user_id', session.user.id)
-            .order('id')
-        notes = data ?? []
-    }
+    // Get parent layout data (including notes)
+    const parentData = await parent()
+    // console.log('🔍 Dashboard server - parent data:', parentData)
     
+    // Return parent data + any dashboard-specific data
     return {
+        ...parentData,
         session,
-        notes,
         cookies: cookies.getAll(),
     }
 }

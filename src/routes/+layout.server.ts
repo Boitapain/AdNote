@@ -8,10 +8,12 @@ export const load: LayoutServerLoad = async ({ locals: { safeGetSession, supabas
     if (session?.user?.id) {
         const { data } = await supabase
             .from('notes')
-            .select('id, note')
+            .select('id, user_id, title, content, created_at, updated_at')
             .eq('user_id', session.user.id)
-            .order('id')
+            .order('created_at', { ascending: false })
         notes = data ?? []
+        // console.log('📝 Notes loaded in root layout:', notes)
+        // console.log('User ID:', session.user.id)
     }
     
     return {
