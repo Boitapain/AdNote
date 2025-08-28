@@ -40,8 +40,9 @@ export const load: LayoutLoad = async ({ data, depends, fetch }) => {
     } = await supabase.auth.getUser()
 
     return { 
-        ...data, // Include server data (including notes!)
-        session, 
+        // Only include safe server data - explicitly exclude cookies
+        notes: data.notes,
+        session,    
         supabase, 
         user 
     }

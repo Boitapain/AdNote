@@ -28,7 +28,9 @@
         <div class="space-y-4">
             <div class="flex justify-between items-center">
                 <h2 class="text-3xl font-bold">Vos Documents</h2>
-                <button class="btn btn-primary">+ Nouveau</button>
+                <form method="POST" action="/editor">
+                    <button type="submit" class="btn btn-primary">+ Nouveau</button>
+                </form>
             </div>
             
             <div class="space-y-3">

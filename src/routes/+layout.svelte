@@ -3,17 +3,22 @@
     import { onMount } from "svelte";
     import type { Snippet } from "svelte";
 
-    let { data, children }: { 
-        data: import('./$types').LayoutData & { notes?: import('$lib/types').Notes }; 
+    let {
+        data,
+        children,
+    }: {
+        data: import("./$types").LayoutData & {
+            notes?: import("$lib/types").Notes;
+        };
         children: Snippet;
     } = $props();
-    
+
     let { session, supabase, notes = [] } = $derived(data);
 
     // Debug: Check what root layout receives
     // $effect(() => {
-    //     console.log('🏠 Root Layout - full data received:', data);
-    //     console.log('🏠 Root Layout - notes:', notes);
+    //     console.log("🏠 Root Layout - full data received:", data);
+    //     console.log("🏠 Root Layout - notes:", notes);
     // });
 
     onMount(() => {

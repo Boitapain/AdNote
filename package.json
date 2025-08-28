@@ -15,6 +15,7 @@
 		"@sveltejs/adapter-auto": "^6.0.0",
 		"@sveltejs/kit": "^2.22.0",
 		"@sveltejs/vite-plugin-svelte": "^6.0.0",
+		"drizzle-kit": "^0.31.4",
 		"svelte": "^5.0.0",
 		"svelte-check": "^4.0.0",
 		"typescript": "^5.0.0",
@@ -30,6 +31,8 @@
 		"@tiptap/react": "^3.3.0",
 		"@tiptap/starter-kit": "^3.3.0",
 		"daisyui": "^5.0.50",
+		"drizzle-orm": "^0.44.5",
+		"postgres": "^3.4.7",
 		"tailwindcss": "^4.1.12"
 	}
 }
