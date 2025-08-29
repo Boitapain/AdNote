@@ -11,7 +11,7 @@
 <!-- Navbar pour la page d'accueil -->
 <Navbar {session} {supabase} {notes} />
 
-<section class="max-w-5xl mx-auto p-6">
+<section class="max-w-5xl mx-auto p-6 mt-16">
     <div class="grid gap-6 md:grid-cols-5">
         <article class="md:col-span-3 card bg-base-300 p-6 shadow">
             <div class="card-body">

@@ -10,6 +10,9 @@
     import Dropcursor from "@tiptap/extension-dropcursor";
     import DragHandle from "@tiptap/extension-drag-handle";
     import BubbleMenu from "@tiptap/extension-bubble-menu";
+    import Link from "@tiptap/extension-link";
+    import Image from "@tiptap/extension-image";
+    import Underline from "@tiptap/extension-underline";
     import { TextStyle, Color } from '@tiptap/extension-text-style';
     import Highlight from '@tiptap/extension-highlight';
     import { SlashCommand } from "$lib/extensions/slash-command";
@@ -42,6 +45,16 @@
     let selectedCommandIndex = $state(0);
     let slashPosition = 0;
     let colorDropdownVisible = $state(false);
+    let searchQuery = $state("");
+    let filteredCommands: typeof commands = $state([]);
+    let linkModalVisible = $state(false);
+    let imageModalVisible = $state(false);
+    let linkUrl = $state("");
+    let linkText = $state("");
+    let imageUrl = $state("");
+    let imageAlt = $state("");
+    let isLoadingLinkPreview = $state(false);
+    let linkPreviewData = $state(null);
 
     // Function to position color dropdown below bubble menu
     function positionColorDropdown() {
@@ -61,6 +74,74 @@
         }
     }
 
+    // Link modal functions
+    function openLinkModal() {
+        console.log('Opening link modal');
+        const selection = editor?.state.selection;
+        if (selection && !selection.empty) {
+            linkText = editor?.state.doc.textBetween(selection.from, selection.to) || "";
+        } else {
+            linkText = "";
+        }
+        linkUrl = "";
+        linkModalVisible = true;
+        setTimeout(() => {
+            const input = document.querySelector('#link-url-input') as HTMLInputElement;
+            input?.focus();
+        }, 100);
+    }
+
+    function closeLinkModal() {
+        linkModalVisible = false;
+        linkUrl = "";
+        linkText = "";
+    }
+
+    function insertLink() {
+        if (!linkUrl.trim()) return;
+        
+        const selection = editor?.state.selection;
+        if (selection && !selection.empty) {
+            // Replace selected text with link
+            editor?.chain().focus().extendMarkRange('link').setLink({ href: linkUrl }).run();
+        } else if (linkText.trim()) {
+            // Insert new text with link
+            editor?.chain().focus().insertContent(`<a href="${linkUrl}">${linkText}</a>`).run();
+        } else {
+            // Insert URL as text and link
+            editor?.chain().focus().insertContent(`<a href="${linkUrl}">${linkUrl}</a>`).run();
+        }
+        
+        closeLinkModal();
+    }
+
+    // Image modal functions
+    function openImageModal() {
+        imageUrl = "";
+        imageAlt = "";
+        imageModalVisible = true;
+        setTimeout(() => {
+            const input = document.querySelector('#image-url-input') as HTMLInputElement;
+            input?.focus();
+        }, 100);
+    }
+
+    function closeImageModal() {
+        imageModalVisible = false;
+        imageUrl = "";
+        imageAlt = "";
+    }
+
+    function insertImage() {
+        if (!imageUrl.trim()) return;
+        
+        editor?.chain().focus().setImage({ 
+            src: imageUrl, 
+            alt: imageAlt || "Image" 
+        }).run();
+        
+        closeImageModal();
+    }
     // Watch for color dropdown visibility changes
     $effect(() => {
         positionColorDropdown();
@@ -71,63 +152,102 @@
             title: "Text", 
             description: "Just start writing with plain text",
             icon: "📄",
+            keywords: ["text", "paragraph", "p"],
             command: () => {}
         },
         { 
             title: "Heading 1", 
             description: "Big section heading",
             icon: "H",
+            keywords: ["heading", "h1", "title", "large"],
             command: () => editor?.chain().focus().toggleHeading({ level: 1 }).run() 
         },
         { 
             title: "Heading 2", 
             description: "Medium section heading",
             icon: "H",
+            keywords: ["heading", "h2", "subtitle", "medium"],
             command: () => editor?.chain().focus().toggleHeading({ level: 2 }).run() 
         },
         { 
             title: "Heading 3", 
             description: "Small section heading",
             icon: "H",
+            keywords: ["heading", "h3", "small"],
             command: () => editor?.chain().focus().toggleHeading({ level: 3 }).run() 
         },
         { 
             title: "Bulleted list", 
             description: "Create a simple bulleted list",
             icon: "•",
+            keywords: ["bullet", "list", "ul"],
             command: () => editor?.chain().focus().toggleBulletList().run() 
         },
         { 
             title: "Numbered list", 
             description: "Create a list with numbering",
             icon: "1.",
+            keywords: ["number", "numbered", "list", "ol", "ordered"],
             command: () => editor?.chain().focus().toggleOrderedList().run() 
         },
         { 
             title: "To-do list", 
             description: "Track tasks with a to-do list",
             icon: "☐",
+            keywords: ["todo", "task", "checkbox", "check"],
             command: () => editor?.chain().focus().toggleTaskList().run()
         },
         { 
             title: "Quote", 
             description: "Capture a quote",
             icon: "💬",
+            keywords: ["quote", "blockquote", "citation"],
             command: () => editor?.chain().focus().toggleBlockquote().run() 
         },
         { 
             title: "Divider", 
             description: "Visually divide blocks",
             icon: "—",
+            keywords: ["divider", "separator", "hr", "horizontal", "rule"],
             command: () => editor?.chain().focus().setHorizontalRule().run() 
         },
         { 
             title: "Code", 
             description: "Capture a code snippet",
             icon: "</>",
+            keywords: ["code", "codeblock", "snippet", "programming"],
             command: () => editor?.chain().focus().toggleCodeBlock().run() 
         },
+        { 
+            title: "Link", 
+            description: "Create a link",
+            icon: "🔗",
+            keywords: ["link", "url", "href", "anchor"],
+            command: () => openLinkModal()
+        },
+        { 
+            title: "Image", 
+            description: "Upload an image",
+            icon: "🖼️",
+            keywords: ["image", "img", "picture", "photo"],
+            command: () => openImageModal()
+        },
     ];
+
+    // Initialize filtered commands
+    filteredCommands = commands;
+
+    // Filter commands based on search query
+    function filterCommands(query: string) {
+        if (!query) return commands;
+        
+        const lowerQuery = query.toLowerCase();
+        return commands.filter(command => 
+            command.title.toLowerCase().includes(lowerQuery) ||
+            command.description.toLowerCase().includes(lowerQuery) ||
+            command.keywords.some(keyword => keyword.toLowerCase().includes(lowerQuery))
+        );
+    }
 
     function openSlashMenu(position: number, slashPos?: number) {
         const coords = editor?.view.coordsAtPos(position);
@@ -136,6 +256,8 @@
                 top: coords.top + window.scrollY + 1, 
                 left: coords.left + window.scrollX - 5
             };
+            searchQuery = "";
+            filteredCommands = commands;
             slashMenuVisible = true;
             selectedCommandIndex = 0;
             if (slashPos !== undefined) {
@@ -147,13 +269,16 @@
     function closeSlashMenu() {
         slashMenuVisible = false;
         selectedCommandIndex = 0;
+        searchQuery = "";
+        filteredCommands = [];
     }
 
     function executeCommand(command: () => void) {
-        // Remove the slash first
+        // Remove the slash and any search query
         if (editor && slashPosition >= 0) {
             const { tr } = editor.state;
-            tr.delete(slashPosition, slashPosition + 1);
+            const currentPos = editor.state.selection.$from.pos;
+            tr.delete(slashPosition, currentPos);
             editor.view.dispatch(tr);
         }
         
@@ -163,6 +288,30 @@
             closeSlashMenu();
             editor?.commands.focus();
         }, 10);
+    }
+
+    function scrollToSelectedItem() {
+        setTimeout(() => {
+            const menu = document.querySelector('.slash-menu') as HTMLElement;
+            const selectedItem = document.querySelector(`.slash-menu .slash-menu-item:nth-child(${selectedCommandIndex + 1})`) as HTMLElement;
+            
+            if (menu && selectedItem) {
+                // Calculate the item's position relative to the menu
+                const itemTop = selectedItem.offsetTop;
+                const itemHeight = selectedItem.offsetHeight;
+                const menuScrollTop = menu.scrollTop;
+                const menuHeight = menu.clientHeight;
+                
+                // Check if item is above visible area
+                if (itemTop < menuScrollTop) {
+                    menu.scrollTop = itemTop;
+                }
+                // Check if item is below visible area
+                else if (itemTop + itemHeight > menuScrollTop + menuHeight) {
+                    menu.scrollTop = itemTop + itemHeight - menuHeight;
+                }
+            }
+        }, 0);
     }
 
     function parseContent(contentStr: string) {
@@ -177,6 +326,12 @@
     onMount(() => {
         // Wait for DOM to be ready
         setTimeout(() => {
+            const bubbleMenuElement = document.querySelector('#bubble-menu') as HTMLElement;
+            if (!bubbleMenuElement) {
+                console.error('Bubble menu element not found');
+                return;
+            }
+
             editor = new Editor({
                 element: document.querySelector("#editor"),
                 extensions: [
@@ -208,11 +363,32 @@
                     }),
                     TextStyle,
                     Color,
+                    Underline,
+                    Link.configure({
+                        openOnClick: false,
+                        HTMLAttributes: {
+                            class: 'notion-link',
+                        },
+                    }),
+                    Image.configure({
+                        HTMLAttributes: {
+                            class: 'notion-image',
+                        },
+                    }),
                     Highlight.configure({
                         multicolor: true,
                     }),
                     BubbleMenu.configure({
-                        element: document.querySelector('#bubble-menu') as HTMLElement,
+                        element: bubbleMenuElement,
+                        shouldShow: ({ state, from, to, view }) => {
+                            // Only show when there's a real text selection (not just cursor position)
+                            const hasSelection = from !== to;
+                            const selectedText = state.doc.textBetween(from, to, ' ');
+                            const editorHasFocus = view.hasFocus();
+                            
+                            // Return true only if there's actual text selected and editor has focus
+                            return hasSelection && selectedText.trim().length > 0 && editorHasFocus;
+                        },
                     }),
                     CodeBlockLowlight.configure({
                     lowlight,
@@ -247,7 +423,17 @@
                     const from = state.selection.$from;
                     const textAfterSlash = state.doc.textBetween(slashPosition + 1, from.pos);
                     
-                    if (textAfterSlash.length > 0 && textAfterSlash !== '') {
+                    // Update search query and filter commands
+                    searchQuery = textAfterSlash;
+                    filteredCommands = filterCommands(textAfterSlash);
+                    
+                    // Reset selected index if it's out of bounds
+                    if (selectedCommandIndex >= filteredCommands.length) {
+                        selectedCommandIndex = 0;
+                    }
+                    
+                    // Close menu if no matches
+                    if (filteredCommands.length === 0) {
                         closeSlashMenu();
                     }
                 }
@@ -256,13 +442,29 @@
         }, 10); // Small delay to ensure DOM is ready
 
         const handleKeyDown = (event: KeyboardEvent) => {
+            if (linkModalVisible || imageModalVisible) {
+                if (event.key === 'Escape') {
+                    event.preventDefault();
+                    closeLinkModal();
+                    closeImageModal();
+                } else if (event.key === 'Enter') {
+                    event.preventDefault();
+                    if (linkModalVisible) {
+                        insertLink();
+                    } else if (imageModalVisible) {
+                        insertImage();
+                    }
+                }
+                return;
+            }
+
             if (slashMenuVisible) {
                 if (event.key === 'Escape') {
                     event.preventDefault();
                     closeSlashMenu();
                 } else if (event.key === 'ArrowDown') {
                     event.preventDefault();
-                    selectedCommandIndex = Math.min(selectedCommandIndex + 1, commands.length - 1);
+                    selectedCommandIndex = Math.min(selectedCommandIndex + 1, filteredCommands.length - 1);
                     scrollToSelectedItem();
                 } else if (event.key === 'ArrowUp') {
                     event.preventDefault();
@@ -270,29 +472,12 @@
                     scrollToSelectedItem();
                 } else if (event.key === 'Enter') {
                     event.preventDefault();
-                    executeCommand(commands[selectedCommandIndex].command);
+                    if (filteredCommands[selectedCommandIndex]) {
+                        executeCommand(filteredCommands[selectedCommandIndex].command);
+                    }
                 }
             }
         };
-
-        function scrollToSelectedItem() {
-            const menu = document.querySelector('.slash-menu');
-            const selectedItem = document.querySelector(`.slash-menu .w-full:nth-child(${selectedCommandIndex + 1})`);
-            
-            if (menu && selectedItem) {
-                const menuRect = menu.getBoundingClientRect();
-                const itemRect = selectedItem.getBoundingClientRect();
-                const menuScrollTop = menu.scrollTop;
-                
-                if (itemRect.bottom > menuRect.bottom) {
-                    // Item is below visible area, scroll down
-                    menu.scrollTop = menuScrollTop + (itemRect.bottom - menuRect.bottom) + 10;
-                } else if (itemRect.top < menuRect.top) {
-                    // Item is above visible area, scroll up
-                    menu.scrollTop = menuScrollTop - (menuRect.top - itemRect.top) - 10;
-                }
-            }
-        }
 
         document.addEventListener('keydown', handleKeyDown);
 
@@ -312,6 +497,20 @@
                     !colorDropdown.contains(event.target as Node) && 
                     !colorButton.contains(event.target as Node)) {
                     colorDropdownVisible = false;
+                }
+            }
+
+            if (linkModalVisible) {
+                const linkModal = document.querySelector('.notion-modal');
+                if (linkModal && !linkModal.contains(event.target as Node)) {
+                    closeLinkModal();
+                }
+            }
+
+            if (imageModalVisible) {
+                const imageModal = document.querySelector('.notion-modal');
+                if (imageModal && !imageModal.contains(event.target as Node)) {
+                    closeImageModal();
                 }
             }
         };
@@ -375,6 +574,19 @@
     </button>
     
     <button
+        onclick={() => editor?.chain().focus().toggleUnderline().run()}
+        class="notion-button"
+        class:notion-button-active={editor?.isActive('underline')}
+        aria-label="Underline"
+        title="Underline"
+    >
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M6 4v7a6 6 0 0 0 6 6 6 6 0 0 0 6-6V4"/>
+            <line x1="4" y1="20" x2="20" y2="20"/>
+        </svg>
+    </button>
+    
+    <button
         onclick={() => editor?.chain().focus().toggleCode().run()}
         class="notion-button"
         class:notion-button-active={editor?.isActive('code')}
@@ -388,6 +600,19 @@
     </button>
     
     <div class="notion-separator"></div>
+    
+    <button
+        onclick={() => openLinkModal()}
+        class="notion-button"
+        class:notion-button-active={editor?.isActive('link')}
+        aria-label="Link"
+        title="Link"
+    >
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/>
+            <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/>
+        </svg>
+    </button>
     
     <button 
         class="notion-button notion-color-button" 
@@ -572,9 +797,11 @@
         style="top: {slashMenuPosition.top + 24}px; left: {slashMenuPosition.left}px;"
     >
         <div class="slash-menu-header">
-            <span class="slash-menu-title">BASIC BLOCKS</span>
+            <span class="slash-menu-title">
+                {searchQuery ? `SEARCH: "${searchQuery}"` : 'BASIC BLOCKS'}
+            </span>
         </div>
-        {#each commands as { title, description, icon, command }, index}
+        {#each filteredCommands as { title, description, icon, command }, index}
             <button
                 class="slash-menu-item {index === selectedCommandIndex ? 'selected' : ''}"
                 onclick={() => executeCommand(command)}
@@ -589,7 +816,88 @@
             </button>
         {/each}
     </div>
-{/if}<style>
+{/if}
+
+<!-- Link Modal -->
+{#if linkModalVisible}
+    <div class="notion-modal-overlay">
+        <div class="notion-modal">
+            <div class="notion-modal-header">
+                <h3>Add Link</h3>
+                <button onclick={closeLinkModal} class="notion-modal-close">×</button>
+            </div>
+            <div class="notion-modal-content">
+                <div class="notion-input-group">
+                    <label for="link-url-input">URL</label>
+                    <input 
+                        id="link-url-input"
+                        type="url" 
+                        placeholder="https://example.com"
+                        bind:value={linkUrl}
+                        class="notion-input"
+                    />
+                </div>
+                {#if !editor?.state.selection.empty}
+                    <div class="notion-input-group">
+                        <label for="link-text-input">Text (optional)</label>
+                        <input 
+                            id="link-text-input"
+                            type="text" 
+                            placeholder="Link text"
+                            bind:value={linkText}
+                            class="notion-input"
+                        />
+                    </div>
+                {/if}
+            </div>
+            <div class="notion-modal-footer">
+                <button onclick={closeLinkModal} class="notion-button-secondary">Cancel</button>
+                <button onclick={insertLink} class="notion-button-primary">Add Link</button>
+            </div>
+        </div>
+    </div>
+{/if}
+
+<!-- Image Modal -->
+{#if imageModalVisible}
+    <div class="notion-modal-overlay">
+        <div class="notion-modal">
+            <div class="notion-modal-header">
+                <h3>Add Image</h3>
+                <button onclick={closeImageModal} class="notion-modal-close">×</button>
+            </div>
+            <div class="notion-modal-content">
+                <div class="notion-input-group">
+                    <label for="image-url-input">Image URL</label>
+                    <input 
+                        id="image-url-input"
+                        type="url" 
+                        placeholder="https://example.com/image.jpg"
+                        bind:value={imageUrl}
+                        class="notion-input"
+                    />
+                </div>
+                <div class="notion-input-group">
+                    <label for="image-alt-input">Alt text (optional)</label>
+                    <input 
+                        id="image-alt-input"
+                        type="text" 
+                        placeholder="Describe the image"
+                        bind:value={imageAlt}
+                        class="notion-input"
+                    />
+                </div>
+            </div>
+            <div class="notion-modal-footer">
+                <button onclick={closeImageModal} class="notion-button-secondary">Cancel</button>
+                <button onclick={insertImage} class="notion-button-primary">Add Image</button>
+            </div>
+        </div>
+    </div>
+{/if}
+
+<!-- Mention Modal -->
+<style>
     /* Clean Notion-like editor styling */
     :global(.notion-editor) {
         font-family: ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
@@ -1060,6 +1368,98 @@
         background: rgba(55, 53, 47, 0.24);
     }
 
+    /* Notion-style Links as mentions */
+    :global(.notion-link) {
+        display: inline-flex;
+        align-items: center;
+        background: rgba(55, 53, 47, 0.08);
+        border-radius: 3px;
+        padding: 1px 2px;
+        font-size: 0.9em;
+        color: rgba(55, 53, 47, 0.8);
+        text-decoration: none;
+        cursor: pointer;
+        transition: all 0.2s ease;
+        user-select: none;
+        white-space: nowrap;
+        position: relative;
+    }
+
+    :global(.notion-link::before) {
+        content: "";
+        display: inline-block;
+        width: 12px;
+        height: 12px;
+        margin-right: 4px;
+        background-image: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>');
+        background-size: contain;
+        background-repeat: no-repeat;
+        opacity: 0.6;
+    }
+
+    :global(.notion-link:hover) {
+        background: rgba(55, 53, 47, 0.16);
+        color: rgba(55, 53, 47, 1);
+    }
+
+    :global(.notion-link:active) {
+        background: rgba(55, 53, 47, 0.24);
+    }
+
+    /* Notion-style Underline */
+    :global(.notion-editor u) {
+        text-decoration: underline;
+        text-underline-offset: 2px;
+        text-decoration-thickness: 1px;
+    }
+
+    /* Notion-style Images */
+    :global(.notion-image) {
+        max-width: 100%;
+        height: auto;
+        border-radius: 3px;
+        margin: 4px 0;
+        cursor: pointer;
+        transition: all 0.2s ease;
+    }
+
+    :global(.notion-image:hover) {
+        transform: scale(1.02);
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    }
+
+    /* Notion-style Mentions */
+    :global(.notion-mention) {
+        display: inline-flex;
+        align-items: center;
+        background: rgba(55, 53, 47, 0.08);
+        border-radius: 3px;
+        padding: 1px 2px;
+        font-size: 0.9em;
+        color: rgba(55, 53, 47, 0.8);
+        text-decoration: none;
+        cursor: pointer;
+        transition: all 0.2s ease;
+        user-select: none;
+        white-space: nowrap;
+        position: relative;
+    }
+
+    :global(.notion-mention::before) {
+        content: "📄";
+        margin-right: 4px;
+        font-size: 12px;
+    }
+
+    :global(.notion-mention:hover) {
+        background: rgba(55, 53, 47, 0.16);
+        color: rgba(55, 53, 47, 1);
+    }
+
+    :global(.notion-mention:active) {
+        background: rgba(55, 53, 47, 0.24);
+    }
+
     /* Syntax highlighting - Notion colors */
     :global(.notion-editor .hljs-keyword) { color: #D73A49; }
     :global(.notion-editor .hljs-string) { color: #032F62; }
@@ -1085,6 +1485,21 @@
         border: 1px solid rgba(0, 0, 0, 0.05);
         position: relative;
         z-index: 1000;
+    }
+
+    /* Global style to ensure bubble menu is positioned correctly */
+    :global(#bubble-menu) {
+        visibility: hidden;
+        opacity: 0;
+        pointer-events: none;
+        transition: all 0.15s ease;
+    }
+
+    /* Force show when TipTap positions it - using more specific selector */
+    :global(#bubble-menu[style*="left"]) {
+        visibility: visible !important;
+        opacity: 1 !important;
+        pointer-events: auto !important;
     }
 
     .notion-button {
@@ -1228,5 +1643,169 @@
     .notion-color-item span {
         font-size: 13px;
         color: rgba(55, 53, 47, 0.8);
+    }
+
+    /* Notion-style Modals */
+    .notion-modal-overlay {
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: rgba(15, 15, 15, 0.6);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        z-index: 10000;
+        backdrop-filter: blur(2px);
+    }
+
+    .notion-modal {
+        background: white;
+        border-radius: 8px;
+        box-shadow: 0 16px 70px rgba(0, 0, 0, 0.2);
+        width: 100%;
+        max-width: 420px;
+        margin: 20px;
+        font-family: ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+        animation: modalSlideIn 0.2s ease-out;
+    }
+
+    @keyframes modalSlideIn {
+        from {
+            opacity: 0;
+            transform: translateY(-20px) scale(0.95);
+        }
+        to {
+            opacity: 1;
+            transform: translateY(0) scale(1);
+        }
+    }
+
+    .notion-modal-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 16px 20px;
+        border-bottom: 1px solid rgba(55, 53, 47, 0.16);
+    }
+
+    .notion-modal-header h3 {
+        margin: 0;
+        font-size: 16px;
+        font-weight: 600;
+        color: rgb(55, 53, 47);
+    }
+
+    .notion-modal-close {
+        background: none;
+        border: none;
+        font-size: 24px;
+        color: rgba(55, 53, 47, 0.6);
+        cursor: pointer;
+        padding: 0;
+        width: 24px;
+        height: 24px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: 4px;
+        transition: all 0.2s ease;
+    }
+
+    .notion-modal-close:hover {
+        background: rgba(55, 53, 47, 0.08);
+        color: rgb(55, 53, 47);
+    }
+
+    .notion-modal-content {
+        padding: 20px;
+    }
+
+    .notion-input-group {
+        margin-bottom: 16px;
+    }
+
+    .notion-input-group:last-child {
+        margin-bottom: 0;
+    }
+
+    .notion-input-group label {
+        display: block;
+        margin-bottom: 6px;
+        font-size: 14px;
+        font-weight: 500;
+        color: rgb(55, 53, 47);
+    }
+
+    .notion-input {
+        width: 100%;
+        padding: 8px 12px;
+        border: 1px solid rgba(55, 53, 47, 0.16);
+        border-radius: 4px;
+        font-size: 14px;
+        font-family: inherit;
+        transition: all 0.2s ease;
+        background: white;
+        color: rgb(55, 53, 47);
+    }
+
+    .notion-input:focus {
+        outline: none;
+        border-color: rgb(35, 131, 226);
+        box-shadow: 0 0 0 1px rgb(35, 131, 226);
+    }
+
+    .notion-input::placeholder {
+        color: rgba(55, 53, 47, 0.4);
+    }
+
+    .notion-modal-footer {
+        display: flex;
+        justify-content: flex-end;
+        gap: 8px;
+        padding: 16px 20px;
+        border-top: 1px solid rgba(55, 53, 47, 0.16);
+    }
+
+    .notion-button-secondary {
+        padding: 6px 12px;
+        border: 1px solid rgba(55, 53, 47, 0.16);
+        border-radius: 4px;
+        background: white;
+        color: rgba(55, 53, 47, 0.8);
+        font-size: 14px;
+        font-weight: 500;
+        cursor: pointer;
+        transition: all 0.2s ease;
+        font-family: inherit;
+    }
+
+    .notion-button-secondary:hover {
+        background: rgba(55, 53, 47, 0.08);
+        color: rgb(55, 53, 47);
+    }
+
+    .notion-button-primary {
+        padding: 6px 12px;
+        border: 1px solid rgb(35, 131, 226);
+        border-radius: 4px;
+        background: rgb(35, 131, 226);
+        color: white;
+        font-size: 14px;
+        font-weight: 500;
+        cursor: pointer;
+        transition: all 0.2s ease;
+        font-family: inherit;
+    }
+
+    .notion-button-primary:hover {
+        background: rgb(29, 111, 192);
+        border-color: rgb(29, 111, 192);
+    }
+
+    .notion-button-primary:disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
     }
 </style>
