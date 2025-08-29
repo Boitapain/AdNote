@@ -1,0 +1,29 @@
+<script lang="ts">
+    import Navbar from "$lib/components/Navbar.svelte";
+    import type { Snippet } from "svelte";
+    
+    let { data, children }: { 
+        data: any & { notes?: import('$lib/types').Notes }; 
+        children: Snippet;
+    } = $props();
+    
+    let { session, supabase, notes = [] } = $derived(data);
+    
+    // Debug: Check what data dashboard layout receives
+    // $effect(() => {
+    //     console.log('🏗️ Dashboard Layout - full data received:', data);
+    //     console.log('🏗️ Dashboard Layout - notes:', notes);
+    // });
+</script>
+
+<!-- Layout avec navbar pour les pages privées -->
+<div class="drawer drawer-mobile">
+    <div class="drawer-content flex flex-col min-h-screen">
+        <Navbar {session} {supabase} {notes} />
+        
+        <!-- page content -->
+        <div class="flex-1">
+            {@render children()}
+        </div>
+    </div>
+</div>

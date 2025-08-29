@@ -134,6 +134,7 @@
                             <!-- Link takes all available space -->
                             <a
                                 href="/editor/{note.id}"
+                                data-sveltekit-reload
                                 class="text-sm flex items-center gap-2 flex-1"
                             >
                                 <svg
@@ -278,3 +279,15 @@
         </div>
     </dialog>
 {/if}
+
+<style>
+    .navbar {
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        z-index: 1000;
+        backdrop-filter: blur(8px);
+        border-bottom: 1px solid rgba(0, 0, 0, 0.1);
+    }
+</style>
